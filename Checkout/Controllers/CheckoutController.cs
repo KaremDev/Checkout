@@ -1,8 +1,10 @@
 ﻿using Checkout.Common;
 using Checkout.Models;
+using Checkout.Payments;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 
@@ -10,17 +12,72 @@ namespace Checkout.Controllers
 {
     public class CheckoutController : Controller
     {
+        private readonly ICheckoutApi _checkoutApi;
+        private readonly ISerializer _serializer;
+        public CheckoutController():this(new JsonSerializer())
+        {
+
+        }
+        public CheckoutController(ISerializer serializer )
+        {
+            var config = new Configration();
+            CheckoutConfiguration configuration = new CheckoutConfiguration(config.Sk, false);
+            ApiClient api = new ApiClient(configuration);
+            _checkoutApi = new CheckoutApi(api, configuration);
+            _serializer = serializer;
+        }
         public ActionResult Index()
         {
             var model = PrepareModel();
             return View(model);
         }
 
-        public ActionResult Post()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Post(PaymentModel model)
         {
-            ViewBag.Message = "Your application description page.";
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    PrepareModel(model);
+                    return View(nameof(Index), model);
+                }
 
-            return View();
+                if (string.IsNullOrWhiteSpace(model.CardToken))
+                    throw new ArgumentException($"{nameof(model.CardToken)} is missing.", nameof(model));
+
+                var source = new TokenSource(model.CardToken);
+                var paymentRequest = new PaymentRequest<TokenSource>(source, model.Currency, model.Amount)
+                {
+                    Capture = model.Capture,
+                    Reference = model.Reference,
+                    ThreeDS = model.DoThreeDS,
+                    SuccessUrl = BuildUrl(nameof(ThreeDSSuccess)),
+                    FailureUrl = BuildUrl(nameof(ThreeDSFailure))
+                };
+
+                var response = await _checkoutApi.Payments.RequestAsync(paymentRequest);
+
+                if (response.IsPending && response.Pending.RequiresRedirect())
+                {
+                    return Redirect(response.Pending.GetRedirectLink().Href);
+                }
+
+                StorePaymentInTempData(response.Payment);
+
+                if (response.Payment.Approved)
+                {
+                    return RedirectToAction(nameof(NonThreeDSSuccess));
+                }
+
+                return RedirectToAction(nameof(NonThreeDSFailure));
+            }
+            catch (Exception ex)
+            {
+                return View(nameof(NonThreeDSFailure));
+                //return View(nameof(Error), new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier, Message = ex.Message });
+            }
         }
         private PaymentModel PrepareModel(PaymentModel existingModel = null)
         {
@@ -32,6 +89,48 @@ namespace Checkout.Controllers
                 new SelectListItem() {Value = Currency.GBP, Text = Currency.GBP}
             };
             return model;
+        }
+        private void StorePaymentInTempData(PaymentProcessed payment)
+        {
+            TempData[nameof(PaymentProcessed)] = _serializer.Serialize(payment);
+        }
+
+        public Task<ActionResult> ThreeDSSuccess(string ckoSessionId)
+    => GetThreeDsPaymentAsync(ckoSessionId);
+
+        [HttpGet]
+        public Task<ActionResult> ThreeDSFailure(string ckoSessionId)
+            => GetThreeDsPaymentAsync(ckoSessionId);
+        private async Task<ActionResult> GetThreeDsPaymentAsync(string sessionId)
+        {
+            GetPaymentResponse payment = await _checkoutApi.Payments.GetAsync(sessionId);
+
+            if (payment == null)
+                return RedirectToAction(nameof(Index));
+
+            return View(payment);
+        }
+
+        [HttpGet]
+        public ActionResult NonThreeDSSuccess() => GetPaymentFromTempData();
+
+        [HttpGet]
+        public ActionResult NonThreeDSFailure() => GetPaymentFromTempData();
+        private ActionResult GetPaymentFromTempData()
+        {
+            if (TempData.TryGetValue(nameof(PaymentProcessed), out var serializedPayment))
+            {
+                var _serializer = new JsonSerializer();
+                var payment = _serializer.Deserialize(serializedPayment.ToString(), typeof(PaymentProcessed)) as PaymentProcessed;
+                return View(payment);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private string BuildUrl(string actionName)
+        {
+            return Url.Action(actionName, "payments", null, Request.Url.Scheme);
         }
     }
 }
