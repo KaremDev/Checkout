@@ -87,7 +87,8 @@ namespace Checkout_Test.Controllers
             {
                 new SelectListItem() {Value = Currency.USD, Text = Currency.USD},
                 new SelectListItem() {Value = Currency.EUR, Text = Currency.EUR},
-                new SelectListItem() {Value = Currency.GBP, Text = Currency.GBP}
+                new SelectListItem() {Value = Currency.GBP, Text = Currency.GBP},
+                new SelectListItem() {Value = Currency.SAR, Text = Currency.SAR}
             };
             return model;
         }
