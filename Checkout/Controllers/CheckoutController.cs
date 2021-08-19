@@ -22,7 +22,7 @@ namespace Checkout_Test.Controllers
         public CheckoutController(ISerializer serializer )
         {
             var config = new Configration();
-            CheckoutConfiguration configuration = new CheckoutConfiguration(config.Sk, false);
+            CheckoutConfiguration configuration = new CheckoutConfiguration(config.Sk, true);
             ApiClient api = new ApiClient(configuration);
             _checkoutApi = new CheckoutApi(api, configuration);
             _serializer = serializer;
@@ -96,20 +96,21 @@ namespace Checkout_Test.Controllers
             TempData[nameof(PaymentProcessed)] = _serializer.Serialize(payment);
         }
 
-        public Task<ActionResult> ThreeDSSuccess(string ckoSessionId)
-    => GetThreeDsPaymentAsync(ckoSessionId);
+        public Task<ActionResult> ThreeDSSuccess()
+    => GetThreeDsPaymentAsync();
 
         [HttpGet]
-        public Task<ActionResult> ThreeDSFailure(string ckoSessionId)
-            => GetThreeDsPaymentAsync(ckoSessionId);
-        private async Task<ActionResult> GetThreeDsPaymentAsync(string sessionId)
+        public Task<ActionResult> ThreeDSFailure()
+            => GetThreeDsPaymentAsync();
+        private async Task<ActionResult> GetThreeDsPaymentAsync()
         {
+            var sessionId = Request.QueryString["cko-session-id"];
             GetPaymentResponse payment = await _checkoutApi.Payments.GetAsync(sessionId);
 
             if (payment == null)
                 return RedirectToAction(nameof(Index));
 
-            return View(payment);
+            return View("NonThreeDSSuccess", payment);
         }
 
         [HttpGet]
@@ -131,7 +132,7 @@ namespace Checkout_Test.Controllers
 
         private string BuildUrl(string actionName)
         {
-            return Url.Action(actionName, "payments", null, Request.Url.Scheme);
+            return Url.Action(actionName, "Checkout", null, Request.Url.Scheme);
         }
     }
 }
