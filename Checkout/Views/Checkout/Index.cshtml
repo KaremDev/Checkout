@@ -2,6 +2,9 @@
 @{
     Layout = null;
 }
+@model Checkout_Test.Models.PaymentModel
+
+@using Checkout_Test.Models.Configuration
 
 <!DOCTYPE html>
 
@@ -24,7 +27,7 @@
                 <input asp-for="CardToken" type="hidden" />
                 <div class="form-group">
                     <label asp-for="Amount"></label>
-                    @Html.<input class="form-control" asp-for="Amount" />
+                    @Html.TextBoxFor(m => m.)<input class="form-control" asp-for="Amount" />
                     <span asp-validation-for="Amount" class="text-danger"></span>
                 </div>
                 <div class="form-group">

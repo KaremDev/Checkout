@@ -1,5 +1,6 @@
-﻿using Checkout.Common;
-using Checkout.Models;
+﻿using Checkout;
+using Checkout.Common;
+using Checkout_Test.Models;
 using Checkout.Payments;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 
-namespace Checkout.Controllers
+namespace Checkout_Test.Controllers
 {
     public class CheckoutController : Controller
     {

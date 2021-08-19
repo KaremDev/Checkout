@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Checkout", "Checkout\Checkout.csproj", "{4A8B282A-49BD-44C6-B694-FDC87D4B44F8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Checkout_Test", "Checkout\Checkout_Test.csproj", "{4A8B282A-49BD-44C6-B694-FDC87D4B44F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
